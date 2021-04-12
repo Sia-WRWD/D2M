@@ -1,5 +1,7 @@
 <h1>Dota 2 Machine (D2M)</h1>
 
+<img src="dotalogo.jpg" alt="dotalogo.jpg">
+
 <h2>What is D2M?</h2>
 <p>D2M is basically a vending machine that sells Dota 2 Figurine to its customers and containing a management system for the items and admins within the Vending Machine ecosystem. 
    <p>Functions that are implemented in the vending machine included:</p>
