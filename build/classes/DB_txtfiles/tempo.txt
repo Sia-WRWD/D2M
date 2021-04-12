@@ -1,0 +1,5 @@
+01:DKFigurine:10.00:6:ItemPic01.png
+02:MIFigurine:15.00:10:ItemPic02.png
+03:WRFigurine:20.00:10:ItemPic03.png
+04:CMFigurine:20.00:10:ItemPic04.png
+06:BSFigurine:15.00:10:ItemPic06.png
