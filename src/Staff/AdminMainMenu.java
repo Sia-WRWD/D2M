@@ -128,12 +128,8 @@ public class AdminMainMenu extends javax.swing.JFrame {
             throw new Exception("Empty Update Item's Item ID!");
         }
 
-        if ("".equals(tfUpOldItemName.getText())) {
+        if ("".equals(tfUpItemName.getText())) {
             throw new Exception("Empty Update Item's Old Item Name!");
-        }
-
-        if ("".equals(tfUpNewItemName.getText())) {
-            throw new Exception("Empty Update Item's New Item Name!");
         }
 
         if ("".equals(tfUpItemPrice.getText())) {
@@ -142,10 +138,6 @@ public class AdminMainMenu extends javax.swing.JFrame {
 
         if ("".equals(tfUpItemQuantity.getText())) {
             throw new Exception("Empty Update Item's Item Quantity!");
-        }
-
-        if ("".equals(lblUpTemp.getText())) {
-            throw new Exception("Empty Update Item's Item Picture!");
         }
     }
 
@@ -357,10 +349,6 @@ public class AdminMainMenu extends javax.swing.JFrame {
             }
             Files.copy(file.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING); //Copies File To The Item_Pic Folder.
             boolean success = oriFileName.renameTo(newFile); //Item Picture File will be Renamed after copying.
-
-            if (!success) {
-                //If Not Successful!
-            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -521,6 +509,76 @@ public class AdminMainMenu extends javax.swing.JFrame {
 
         String saveDir = System.getProperty("user.dir") + "\\src\\DB_txtfiles\\itemlist.txt"; //Retrieving Directory of itemlist.txt File.
         File file = new File(saveDir);
+        FileReader fr2 = new FileReader(file);
+        BufferedReader br2 = new BufferedReader(fr2);
+        String record;
+
+        while ((record = br2.readLine()) != null) { //Retrieving All Data itemlist.txt File.
+            String[] fields = record.split(":");
+            String ItemID = fields[0];
+            String ItemName = fields[1];
+            String ItemPrice = fields[2];
+            String ItemQuantity = fields[3];
+            String ItemPic = fields[4];
+            String ItemNameregex = "^[A-Za-z_][A-Za-z0-9_]{4,9}$"; //Check if New Item Name inputted is within 4 to 10 characters.
+            boolean ItemNamematch = tfUpItemName.getText().matches(ItemNameregex);
+            String ItemPriceregex = "\\d{1,2}\\.\\d{1,2}"; //Check if New Item Price inputted is in the 0.00, 00.00 format.
+            boolean ItemPricematch = tfUpItemPrice.getText().matches(ItemPriceregex);
+            
+            try {
+                if (ItemName.equals(tfUpItemName.getText())) { //Check If Item Name Already Existed
+                    br2.close();
+                    JOptionPane.showMessageDialog(null, "Item Name Provided Already Exist, Please Try Something Else!", "Item Name Already Exist", JOptionPane.WARNING_MESSAGE);
+                } else if("".equals(tfUpItemID.getText()) || "".equals(tfUpItemName.getText()) || "".equals(tfUpItemPrice.getText()) || "".equals(tfUpItemQuantity.getText())) { //Check for Empty Fields.
+                    br2.close();
+                    JOptionPane.showMessageDialog(null, "Empty Fields Detected, Please Fill it Up!", "Empty Fields", JOptionPane.WARNING_MESSAGE);
+                    HighlightEmptyFields();
+                    UpdateItemEmptyField();
+                } else if (Integer.parseInt(tfUpItemQuantity.getText()) > 10) { //Check if Item Quantity Exceeded 10.
+                    br2.close();
+                    JOptionPane.showMessageDialog(null, "New Item Quantity Shouldn't Exceed 10", "Invalid Item Quantity", JOptionPane.WARNING_MESSAGE);
+                } else if (!ItemNamematch) { //Check Item Name Regex.
+                    br2.close();
+                    JOptionPane.showMessageDialog(null, "New Item Name Should be Between 5 and 10 Characters!", "Invalid Item Name", JOptionPane.WARNING_MESSAGE);
+                } else if (!ItemPricematch) { //Check Item Price Regex.
+                    br2.close();
+                    JOptionPane.showMessageDialog(null, "New Item Price Should be in the '0.00' or 00.00' format!", "Invalid Item Price", JOptionPane.WARNING_MESSAGE);
+                } else if ("*".equals(tfUpItemName.getText()) || "*".equals(tfUpItemPrice.getText()) || "*".equals(tfUpItemQuantity.getText())) { //Check if Quantity, Item Price and Item Name inputs only contains * which is illegal.
+                    br2.close();
+                    JOptionPane.showMessageDialog(null, "Invalid New Item Name, Item Price or Item Quantity, Please Try Again!", "Invalid Inputs", JOptionPane.WARNING_MESSAGE);
+                } else if (ItemID.equals(tfUpItemID.getText())) { //Checks if ItemID Matches Data in itemlist.txt, Yes = Update Data.
+                    br2.close();
+                    deleteItemData(saveDir, ItemID, 1, ":");
+                    FileWriter fw = new FileWriter(file, true);
+                    BufferedWriter bw = new BufferedWriter(fw);
+                    String UpItemName = tfUpItemName.getText(); //Assign Variables Based on User Inputs.
+                    String UpItemPrice = tfUpItemPrice.getText();
+                    String UpItemQuantity = tfUpItemQuantity.getText();
+                    String UpitemData = ItemID + ":" + UpItemName + ":" + UpItemPrice + ":" + UpItemQuantity + ":" + "ItemPic" + ItemID + ".png" + "\n";
+                    bw.write(UpitemData); //Writes the Values From The Variables to the itemlist.txt File.
+                    bw.close();
+                    sortItemData(saveDir, saveDir); //Rearrange the data Lines in itemlist.txt Alphabetically.
+                    String oldFileLocation = lblUpTemp.getText(); //Assigns Location of Selected Image to a Label to Send to insertImage() Method.
+                    insertItemImage(ItemID, oldFileLocation); //Calls insertImage Method with values of product_id and oldFileLocation.
+                    DeHighlightEmptyFields();
+                    JOptionPane.showMessageDialog(null, "Successfully Updated " + tfUpItemName.getText() + ".", "Update Item Successful", JOptionPane.INFORMATION_MESSAGE);
+                    tfUpItemID.setText(""); //Reset Form
+                    tfUpItemName.setText("");
+                    tfUpItemPrice.setText("");
+                    tfUpItemQuantity.setText("");
+                    lblUpTemp.setText("");
+                    lblUpItemPicPrev.setIcon(null);
+                    break;
+                }
+            } catch (Exception ex) {
+                Logger.getLogger(AdminMainMenu.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }
+
+    private void ShowUpdateDetails(String ItemSelectedID) throws IOException {
+        String saveDir = System.getProperty("user.dir") + "\\src\\DB_txtfiles\\itemlist.txt"; //Retrieving Directory of itemlist.txt File.
+        File file = new File(saveDir);
         FileReader fr = new FileReader(file);
         BufferedReader br = new BufferedReader(fr);
         String record;
@@ -532,61 +590,18 @@ public class AdminMainMenu extends javax.swing.JFrame {
             String ItemPrice = fields[2];
             String ItemQuantity = fields[3];
             String ItemPic = fields[4];
-            String ItemNameregex = "^[A-Za-z_][A-Za-z0-9_]{4,9}$"; //Check if New Item Name inputted is within 4 to 10 characters.
-            boolean ItemNamematch = tfUpNewItemName.getText().matches(ItemNameregex);
-            String ItemPriceregex = "\\d{1,2}\\.\\d{1,2}"; //Check if New Item Price inputted is in the 0.00, 00.00 format.
-            boolean ItemPricematch = tfUpItemPrice.getText().matches(ItemPriceregex);
 
-            try {
-                if ("".equals(tfUpItemID.getText()) || "".equals(tfUpOldItemName.getText()) || "".equals(tfUpItemPrice.getText()) || "".equals(tfUpItemQuantity.getText()) || "".equals(lblUpTemp.getText())) { //Check for Empty Fields.
-                    br.close();
-                    JOptionPane.showMessageDialog(null, "Empty Fields Detected, Please Fill it Up!", "Empty Fields", JOptionPane.WARNING_MESSAGE);
-                    HighlightEmptyFields();
-                    UpdateItemEmptyField();
-                } else if (!ItemName.equals(tfUpOldItemName.getText()) || !ItemID.equals(tfUpItemID.getText())) { //Check if Item Name and ItemID Existed in the itemlist.txt, No = X Update Data.
-                    if (ItemID.equals("06")) { //Conclude search after reaching last Item ID in Database.
-                        br.close();
-                        JOptionPane.showMessageDialog(null, "Old Item Name or Item ID Provided is False, Please Try Again!", "Invalid Item Name or Item ID", JOptionPane.WARNING_MESSAGE);
-                    }
-                } else if (Integer.parseInt(tfUpItemQuantity.getText()) > 10) {
-                    br.close();
-                    JOptionPane.showMessageDialog(null, "New Item Quantity Shouldn't Exceed 10", "Invalid Item Quantity", JOptionPane.WARNING_MESSAGE);
-                } else if (!ItemNamematch) { //Check Item Name Regex.
-                    br.close();
-                    JOptionPane.showMessageDialog(null, "New Item Name Should be Between 5 and 10 Characters!", "Invalid Item Name", JOptionPane.WARNING_MESSAGE);
-                } else if (!ItemPricematch) { //Check Item Price Regex.
-                    br.close();
-                    JOptionPane.showMessageDialog(null, "New Item Price Should be in the '0.00' or 00.00' format!", "Invalid Item Price", JOptionPane.WARNING_MESSAGE);
-                } else if ("*".equals(tfUpNewItemName.getText()) || "*".equals(tfUpItemPrice.getText()) || "*".equals(tfUpItemQuantity.getText())) { //Check if Quantity, Item Price and Item Name inputs only contains * which is illegal.
-                    br.close();
-                    JOptionPane.showMessageDialog(null, "Invalid New Item Name, Item Price or Item Quantity, Please Try Again!", "Invalid Inputs", JOptionPane.WARNING_MESSAGE);
-                } else if (ItemName.equals(tfUpOldItemName.getText()) && ItemID.equals(tfUpItemID.getText())) { //Checks if ItemName and ItemID Matches Data in itemlist.txt, Yes = Update Data.
-                    br.close();
-                    deleteItemData(saveDir, ItemID, 1, ":");
-                    FileWriter fw = new FileWriter(file, true);
-                    BufferedWriter bw = new BufferedWriter(fw);
-                    String UpItemName = tfUpNewItemName.getText(); //Assign Variables Based on User Inputs.
-                    String UpItemPrice = tfUpItemPrice.getText();
-                    String UpItemQuantity = tfUpItemQuantity.getText();
-                    String UpitemData = ItemID + ":" + UpItemName + ":" + UpItemPrice + ":" + UpItemQuantity + ":" + "ItemPic" + ItemID + ".png" + "\n";
-                    bw.write(UpitemData); //Writes the Values From The Variables to the itemlist.txt File.
-                    bw.close();
-                    sortItemData(saveDir, saveDir); //Rearrange the data Lines in itemlist.txt Alphabetically.
-                    String oldFileLocation = lblUpTemp.getText(); //Assigns Location of Selected Image to a Label to Send to insertImage() Method.
-                    insertItemImage(ItemID, oldFileLocation); //Calls insertImage Method with values of product_id and oldFileLocation.
-                    DeHighlightEmptyFields();
-                    JOptionPane.showMessageDialog(null, "Successfully Updated " + tfUpOldItemName.getText() + ".", "Update Item Successful", JOptionPane.INFORMATION_MESSAGE);
-                    tfUpItemID.setText(""); //Reset Form
-                    tfUpOldItemName.setText("");
-                    tfUpNewItemName.setText("");
-                    tfUpItemPrice.setText("");
-                    tfUpItemQuantity.setText("");
-                    lblUpTemp.setText("");
-                    lblUpItemPicPrev.setIcon(null);
-                    break;
-                }
-            } catch (Exception ex) {
-                Logger.getLogger(AdminMainMenu.class.getName()).log(Level.SEVERE, null, ex);
+            if (ItemSelectedID.equals(ItemID)) { //Display Item Details based on ItemID.
+                br.close();
+                tfUpItemID.setEnabled(false);
+                tfUpItemID.setText(ItemID);
+                tfUpItemName.setText(ItemName);
+                tfUpItemPrice.setText(ItemPrice);
+                tfUpItemQuantity.setText(ItemQuantity);
+                String getSelectedImage = System.getProperty("user.dir") + "\\src\\Item_Pic\\" + ItemPic; //Directory for Image.
+                BufferedImage BuffImageIco = ImageIO.read(new File(getSelectedImage)); //Creates Picture From The Image Icon.
+                lblUpItemPicPrev.setIcon(new ImageIcon(BuffImageIco));
+                break;
             }
         }
     }
@@ -966,7 +981,6 @@ public class AdminMainMenu extends javax.swing.JFrame {
         btnAdd = new javax.swing.JButton();
         jPanel2 = new javax.swing.JPanel();
         jLabel23 = new javax.swing.JLabel();
-        lblUpdateItem = new javax.swing.JLabel();
         lblItemPic = new javax.swing.JLabel();
         lblTemp = new javax.swing.JLabel();
         jLabel12 = new javax.swing.JLabel();
@@ -1042,21 +1056,19 @@ public class AdminMainMenu extends javax.swing.JFrame {
         JP_UpdateItem = new javax.swing.JPanel();
         jPanel13 = new javax.swing.JPanel();
         jlWelcome1 = new javax.swing.JLabel();
-        lblUpOldItemName = new javax.swing.JLabel();
+        lblUpItemName = new javax.swing.JLabel();
         lblUpItemPrice = new javax.swing.JLabel();
         lblUpItemQuantity = new javax.swing.JLabel();
         lblUpItemPic = new javax.swing.JLabel();
         btnUpItemPic = new javax.swing.JButton();
         tfUpItemQuantity = new javax.swing.JTextField();
         tfUpItemPrice = new javax.swing.JTextField();
-        tfUpOldItemName = new javax.swing.JTextField();
+        tfUpItemName = new javax.swing.JTextField();
         btnUpdate = new javax.swing.JButton();
         lblUpItemPicPrev = new javax.swing.JLabel();
         lblUpTemp = new javax.swing.JLabel();
         lblUpItemID = new javax.swing.JLabel();
         tfUpItemID = new javax.swing.JTextField();
-        tfUpNewItemName = new javax.swing.JTextField();
-        lblUpNewItemName = new javax.swing.JLabel();
         jLabel27 = new javax.swing.JLabel();
         jLabel31 = new javax.swing.JLabel();
         jLabel32 = new javax.swing.JLabel();
@@ -1748,15 +1760,6 @@ public class AdminMainMenu extends javax.swing.JFrame {
                 .addComponent(jLabel23, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
         );
 
-        lblUpdateItem.setFont(new java.awt.Font("Times New Roman", 3, 12)); // NOI18N
-        lblUpdateItem.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        lblUpdateItem.setText("Already Created the Item?");
-        lblUpdateItem.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
-                lblUpdateItemMouseClicked(evt);
-            }
-        });
-
         lblItemPic.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         lblItemPic.setMaximumSize(new java.awt.Dimension(250, 250));
         lblItemPic.setPreferredSize(new java.awt.Dimension(250, 250));
@@ -1782,7 +1785,6 @@ public class AdminMainMenu extends javax.swing.JFrame {
             .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, 530, Short.MAX_VALUE)
             .addGroup(JP_AddItemLayout.createSequentialGroup()
                 .addGroup(JP_AddItemLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(lblUpdateItem, javax.swing.GroupLayout.PREFERRED_SIZE, 190, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btnAdd, javax.swing.GroupLayout.PREFERRED_SIZE, 190, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(JP_AddItemLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(JP_AddItemLayout.createSequentialGroup()
@@ -1842,9 +1844,7 @@ public class AdminMainMenu extends javax.swing.JFrame {
                                 .addComponent(lblTemp, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                         .addComponent(btnAdd, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(lblUpdateItem)
-                        .addGap(30, 30, 30))
+                        .addGap(51, 51, 51))
                     .addGroup(JP_AddItemLayout.createSequentialGroup()
                         .addGap(9, 9, 9)
                         .addComponent(lblAddItemPic)
@@ -2147,6 +2147,11 @@ public class AdminMainMenu extends javax.swing.JFrame {
         );
 
         Item3.setBackground(new java.awt.Color(0, 0, 0));
+        Item3.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                Item3MouseClicked(evt);
+            }
+        });
 
         ItemPic3.setBackground(new java.awt.Color(255, 255, 255));
         ItemPic3.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
@@ -2208,6 +2213,11 @@ public class AdminMainMenu extends javax.swing.JFrame {
 
         Item2.setBackground(new java.awt.Color(0, 0, 0));
         Item2.setForeground(new java.awt.Color(255, 204, 0));
+        Item2.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                Item2MouseClicked(evt);
+            }
+        });
 
         ItemPic2.setBackground(new java.awt.Color(255, 255, 255));
         ItemPic2.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
@@ -2267,6 +2277,11 @@ public class AdminMainMenu extends javax.swing.JFrame {
 
         Item1.setBackground(new java.awt.Color(0, 0, 0));
         Item1.setForeground(new java.awt.Color(255, 204, 0));
+        Item1.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                Item1MouseClicked(evt);
+            }
+        });
 
         ItemPic1.setBackground(new java.awt.Color(255, 255, 255));
         ItemPic1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
@@ -2327,6 +2342,11 @@ public class AdminMainMenu extends javax.swing.JFrame {
         );
 
         Item4.setBackground(new java.awt.Color(0, 0, 0));
+        Item4.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                Item4MouseClicked(evt);
+            }
+        });
 
         ItemPic4.setBackground(new java.awt.Color(255, 255, 255));
         ItemPic4.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
@@ -2387,6 +2407,11 @@ public class AdminMainMenu extends javax.swing.JFrame {
         );
 
         Item5.setBackground(new java.awt.Color(0, 0, 0));
+        Item5.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                Item5MouseClicked(evt);
+            }
+        });
 
         ItemPic5.setBackground(new java.awt.Color(255, 255, 255));
         ItemPic5.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
@@ -2448,6 +2473,11 @@ public class AdminMainMenu extends javax.swing.JFrame {
 
         Item6.setBackground(new java.awt.Color(0, 0, 0));
         Item6.setForeground(new java.awt.Color(255, 204, 0));
+        Item6.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                Item6MouseClicked(evt);
+            }
+        });
 
         ItemPic6.setBackground(new java.awt.Color(255, 255, 255));
         ItemPic6.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
@@ -2568,17 +2598,17 @@ public class AdminMainMenu extends javax.swing.JFrame {
                 .addComponent(jlWelcome1))
         );
 
-        lblUpOldItemName.setFont(new java.awt.Font("Times New Roman", 1, 18)); // NOI18N
-        lblUpOldItemName.setText("Old Item Name:");
+        lblUpItemName.setFont(new java.awt.Font("Times New Roman", 1, 18)); // NOI18N
+        lblUpItemName.setText("Item Name:");
 
         lblUpItemPrice.setFont(new java.awt.Font("Times New Roman", 1, 18)); // NOI18N
-        lblUpItemPrice.setText("New Item Price:");
+        lblUpItemPrice.setText("Item Price:");
 
         lblUpItemQuantity.setFont(new java.awt.Font("Times New Roman", 1, 18)); // NOI18N
-        lblUpItemQuantity.setText(" New Quantity:");
+        lblUpItemQuantity.setText(" Quantity:");
 
         lblUpItemPic.setFont(new java.awt.Font("Times New Roman", 1, 18)); // NOI18N
-        lblUpItemPic.setText("New Item Picture:");
+        lblUpItemPic.setText("Item Picture:");
 
         btnUpItemPic.setFont(new java.awt.Font("Times New Roman", 1, 16)); // NOI18N
         btnUpItemPic.setText("Upload Picture");
@@ -2592,7 +2622,7 @@ public class AdminMainMenu extends javax.swing.JFrame {
 
         tfUpItemPrice.setFont(new java.awt.Font("Times New Roman", 1, 16)); // NOI18N
 
-        tfUpOldItemName.setFont(new java.awt.Font("Times New Roman", 1, 16)); // NOI18N
+        tfUpItemName.setFont(new java.awt.Font("Times New Roman", 1, 16)); // NOI18N
 
         btnUpdate.setBackground(new java.awt.Color(0, 0, 0));
         btnUpdate.setFont(new java.awt.Font("Times New Roman", 1, 16)); // NOI18N
@@ -2610,11 +2640,6 @@ public class AdminMainMenu extends javax.swing.JFrame {
         lblUpItemID.setText("Item ID:");
 
         tfUpItemID.setFont(new java.awt.Font("Times New Roman", 1, 16)); // NOI18N
-
-        tfUpNewItemName.setFont(new java.awt.Font("Times New Roman", 1, 16)); // NOI18N
-
-        lblUpNewItemName.setFont(new java.awt.Font("Times New Roman", 1, 18)); // NOI18N
-        lblUpNewItemName.setText("New Item Name:");
 
         jLabel27.setFont(new java.awt.Font("Times New Roman", 1, 14)); // NOI18N
         jLabel27.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
@@ -2636,51 +2661,47 @@ public class AdminMainMenu extends javax.swing.JFrame {
             JP_UpdateItemLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addComponent(jPanel13, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addGroup(JP_UpdateItemLayout.createSequentialGroup()
-                .addGap(163, 163, 163)
-                .addComponent(lblUpItemID)
-                .addGap(18, 18, 18)
-                .addComponent(tfUpItemID, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
-            .addGroup(JP_UpdateItemLayout.createSequentialGroup()
-                .addGap(104, 104, 104)
-                .addComponent(lblUpOldItemName)
-                .addGap(18, 18, 18)
-                .addComponent(tfUpOldItemName, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
-            .addGroup(JP_UpdateItemLayout.createSequentialGroup()
-                .addGap(100, 100, 100)
-                .addComponent(lblUpNewItemName)
-                .addGap(18, 18, 18)
-                .addComponent(tfUpNewItemName, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
-            .addGroup(JP_UpdateItemLayout.createSequentialGroup()
-                .addGap(106, 106, 106)
-                .addComponent(lblUpItemPrice)
-                .addGap(18, 18, 18)
-                .addComponent(tfUpItemPrice, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
-            .addGroup(JP_UpdateItemLayout.createSequentialGroup()
-                .addGap(112, 112, 112)
-                .addComponent(lblUpItemQuantity)
-                .addGap(18, 18, 18)
-                .addComponent(tfUpItemQuantity, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
-            .addGroup(JP_UpdateItemLayout.createSequentialGroup()
-                .addGap(90, 90, 90)
-                .addComponent(lblUpItemPic)
-                .addGap(18, 18, 18)
-                .addComponent(btnUpItemPic, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
-            .addGroup(JP_UpdateItemLayout.createSequentialGroup()
-                .addGap(65, 65, 65)
                 .addGroup(JP_UpdateItemLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel27, javax.swing.GroupLayout.PREFERRED_SIZE, 172, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(JP_UpdateItemLayout.createSequentialGroup()
-                        .addGap(30, 30, 30)
+                        .addGap(65, 65, 65)
                         .addGroup(JP_UpdateItemLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel32, javax.swing.GroupLayout.PREFERRED_SIZE, 103, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(jLabel31, javax.swing.GroupLayout.PREFERRED_SIZE, 103, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(lblUpItemPicPrev, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(30, 30, 30)
-                .addComponent(lblUpTemp, javax.swing.GroupLayout.PREFERRED_SIZE, 41, javax.swing.GroupLayout.PREFERRED_SIZE))
-            .addGroup(JP_UpdateItemLayout.createSequentialGroup()
-                .addGap(247, 247, 247)
-                .addComponent(btnUpdate, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(jLabel27, javax.swing.GroupLayout.PREFERRED_SIZE, 172, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addGroup(JP_UpdateItemLayout.createSequentialGroup()
+                                .addGap(30, 30, 30)
+                                .addGroup(JP_UpdateItemLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(jLabel31, javax.swing.GroupLayout.PREFERRED_SIZE, 103, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(jLabel32, javax.swing.GroupLayout.PREFERRED_SIZE, 103, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                        .addGap(10, 10, 10)
+                        .addComponent(lblUpItemPicPrev, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(30, 30, 30)
+                        .addComponent(lblUpTemp, javax.swing.GroupLayout.PREFERRED_SIZE, 41, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(JP_UpdateItemLayout.createSequentialGroup()
+                        .addGap(247, 247, 247)
+                        .addComponent(btnUpdate, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(JP_UpdateItemLayout.createSequentialGroup()
+                        .addGap(128, 128, 128)
+                        .addGroup(JP_UpdateItemLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addGroup(JP_UpdateItemLayout.createSequentialGroup()
+                                .addComponent(lblUpItemPrice)
+                                .addGap(18, 18, 18)
+                                .addComponent(tfUpItemPrice, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(JP_UpdateItemLayout.createSequentialGroup()
+                                .addComponent(lblUpItemQuantity)
+                                .addGap(18, 18, 18)
+                                .addComponent(tfUpItemQuantity, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(JP_UpdateItemLayout.createSequentialGroup()
+                                .addComponent(lblUpItemName)
+                                .addGap(18, 18, 18)
+                                .addComponent(tfUpItemName, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(JP_UpdateItemLayout.createSequentialGroup()
+                                .addComponent(lblUpItemPic)
+                                .addGap(18, 18, 18)
+                                .addComponent(btnUpItemPic, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(JP_UpdateItemLayout.createSequentialGroup()
+                                .addComponent(lblUpItemID)
+                                .addGap(18, 18, 18)
+                                .addComponent(tfUpItemID, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE)))))
+                .addGap(0, 0, Short.MAX_VALUE))
         );
         JP_UpdateItemLayout.setVerticalGroup(
             JP_UpdateItemLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -2692,25 +2713,17 @@ public class AdminMainMenu extends javax.swing.JFrame {
                         .addGap(2, 2, 2)
                         .addComponent(lblUpItemID))
                     .addComponent(tfUpItemID, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(6, 6, 6)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(JP_UpdateItemLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(JP_UpdateItemLayout.createSequentialGroup()
                         .addGap(2, 2, 2)
-                        .addComponent(lblUpOldItemName))
-                    .addComponent(tfUpOldItemName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(6, 6, 6)
-                .addGroup(JP_UpdateItemLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(JP_UpdateItemLayout.createSequentialGroup()
-                        .addGap(2, 2, 2)
-                        .addComponent(lblUpNewItemName))
-                    .addComponent(tfUpNewItemName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(9, 9, 9)
-                .addGroup(JP_UpdateItemLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(JP_UpdateItemLayout.createSequentialGroup()
-                        .addGap(2, 2, 2)
-                        .addComponent(lblUpItemPrice))
-                    .addComponent(tfUpItemPrice, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(6, 6, 6)
+                        .addComponent(lblUpItemName))
+                    .addComponent(tfUpItemName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(JP_UpdateItemLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(tfUpItemPrice, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(lblUpItemPrice))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(JP_UpdateItemLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(JP_UpdateItemLayout.createSequentialGroup()
                         .addGap(2, 2, 2)
@@ -2724,14 +2737,14 @@ public class AdminMainMenu extends javax.swing.JFrame {
                     .addComponent(btnUpItemPic))
                 .addGap(11, 11, 11)
                 .addGroup(JP_UpdateItemLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(lblUpItemPicPrev, javax.swing.GroupLayout.PREFERRED_SIZE, 95, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(lblUpTemp, javax.swing.GroupLayout.PREFERRED_SIZE, 18, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(JP_UpdateItemLayout.createSequentialGroup()
                         .addComponent(jLabel27)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGap(6, 6, 6)
                         .addComponent(jLabel31)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(jLabel32)))
+                        .addGap(11, 11, 11)
+                        .addComponent(jLabel32))
+                    .addComponent(lblUpItemPicPrev, javax.swing.GroupLayout.PREFERRED_SIZE, 95, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(lblUpTemp, javax.swing.GroupLayout.PREFERRED_SIZE, 18, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(11, 11, 11)
                 .addComponent(btnUpdate, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE))
         );
@@ -3122,12 +3135,8 @@ public class AdminMainMenu extends javax.swing.JFrame {
             lblUpItemID.setForeground(euf);
         }
 
-        if ("".equals(tfUpOldItemName.getText())) {
-            lblUpOldItemName.setForeground(euf);
-        }
-
-        if ("".equals(tfUpNewItemName.getText())) {
-            lblUpNewItemName.setForeground(euf);
+        if ("".equals(tfUpItemName.getText())) {
+            lblUpItemName.setForeground(euf);
         }
 
         if ("".equals(tfUpItemPrice.getText())) {
@@ -3137,11 +3146,7 @@ public class AdminMainMenu extends javax.swing.JFrame {
         if ("".equals(tfUpItemQuantity.getText())) {
             lblUpItemQuantity.setForeground(euf);
         }
-
-        if ("".equals(lblUpTemp.getText())) {
-            lblUpItemPic.setForeground(euf);
-        }
-
+        
         if ("".equals(tfPastTranID.getText())) {
             lblTransactionID.setForeground(euf);
         }
@@ -3162,11 +3167,9 @@ public class AdminMainMenu extends javax.swing.JFrame {
         lblDelUsername.setForeground(neuf);
         lblDelPassword.setForeground(neuf);
         lblUpItemID.setForeground(neuf);
-        lblUpOldItemName.setForeground(neuf);
+        lblUpItemName.setForeground(neuf);
         lblUpItemPrice.setForeground(neuf);
         lblUpItemQuantity.setForeground(neuf);
-        lblUpNewItemName.setForeground(neuf);
-        lblUpItemPic.setForeground(neuf);
         lblItemPic.setForeground(neuf);
         lblTransactionID.setForeground(neuf);
     }
@@ -3373,7 +3376,6 @@ public class AdminMainMenu extends javax.swing.JFrame {
             setVisible(false);
             try {
                 new AdminMainMenu().setVisible(true);
-
             } catch (IOException ex) {
                 Logger.getLogger(AdminMainMenu.class
                         .getName()).log(Level.SEVERE, null, ex);
@@ -3397,28 +3399,15 @@ public class AdminMainMenu extends javax.swing.JFrame {
         try {
             this.setVisible(false);
             new AdminMainMenu().setVisible(true);
-
         } catch (IOException ex) {
             Logger.getLogger(AdminMainMenu.class
                     .getName()).log(Level.SEVERE, null, ex);
         }
     }//GEN-LAST:event_btnMainMenuMouseClicked
 
-    private void lblUpdateItemMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_lblUpdateItemMouseClicked
-        JP_UpdateItem.setVisible(true);
-        JP_MainMenu.setVisible(false);
-        JP_DeleteAccount.setVisible(false);
-        JP_EditPwd.setVisible(false);
-        JP_DeleteItem.setVisible(false);
-        JP_AddItem.setVisible(false);
-        JP_Registration.setVisible(false);
-        JP_PastTransaction.setVisible(false);
-    }//GEN-LAST:event_lblUpdateItemMouseClicked
-
     private void btnAddActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAddActionPerformed
         try {
             InsertItem();
-
         } catch (IOException ex) {
             Logger.getLogger(AdminMainMenu.class
                     .getName()).log(Level.SEVERE, null, ex);
@@ -3432,7 +3421,6 @@ public class AdminMainMenu extends javax.swing.JFrame {
     private void btnDelItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDelItemActionPerformed
         try {
             DeleteItem();
-
         } catch (IOException ex) {
             Logger.getLogger(AdminMainMenu.class
                     .getName()).log(Level.SEVERE, null, ex);
@@ -3442,7 +3430,8 @@ public class AdminMainMenu extends javax.swing.JFrame {
     private void btnUpdateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnUpdateActionPerformed
         try {
             UpdateItem();
-
+            this.dispose();
+            new AdminMainMenu().setVisible(true);
         } catch (IOException ex) {
             Logger.getLogger(AdminMainMenu.class
                     .getName()).log(Level.SEVERE, null, ex);
@@ -3456,7 +3445,6 @@ public class AdminMainMenu extends javax.swing.JFrame {
     private void btnEditPasswordActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEditPasswordActionPerformed
         try {
             EditPassword();
-
         } catch (IOException ex) {
             Logger.getLogger(AdminMainMenu.class
                     .getName()).log(Level.SEVERE, null, ex);
@@ -3468,7 +3456,6 @@ public class AdminMainMenu extends javax.swing.JFrame {
             DeleteAccount();
             new AdminLogin().setVisible(true);
             this.dispose();
-
         } catch (IOException ex) {
             Logger.getLogger(AdminMainMenu.class
                     .getName()).log(Level.SEVERE, null, ex);
@@ -3494,6 +3481,90 @@ public class AdminMainMenu extends javax.swing.JFrame {
                     .getName()).log(Level.SEVERE, null, ex);
         }
     }//GEN-LAST:event_btnSearchActionPerformed
+
+    private void Item1MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_Item1MouseClicked
+        try {
+            if (ItemName1.getText().equals("Empty Slot")) {
+                JOptionPane.showMessageDialog(null, "Empty Slot, Please try Something Else!", "Empty Slot", JOptionPane.WARNING_MESSAGE);
+            } else {
+                JP_MainMenu.setVisible(false);
+                JP_UpdateItem.setVisible(true);
+                ShowUpdateDetails("01");
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(AdminMainMenu.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_Item1MouseClicked
+
+    private void Item2MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_Item2MouseClicked
+        try {
+            if (ItemName2.getText().equals("Empty Slot")) {
+                JOptionPane.showMessageDialog(null, "Empty Slot, Please try Something Else!", "Empty Slot", JOptionPane.WARNING_MESSAGE);
+            } else {
+                JP_MainMenu.setVisible(false);
+                JP_UpdateItem.setVisible(true);
+                ShowUpdateDetails("02");
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(AdminMainMenu.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_Item2MouseClicked
+
+    private void Item3MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_Item3MouseClicked
+        try {
+            if (ItemName1.getText().equals("Empty Slot")) {
+                JOptionPane.showMessageDialog(null, "Empty Slot, Please try Something Else!", "Empty Slot", JOptionPane.WARNING_MESSAGE);
+            } else {
+                JP_MainMenu.setVisible(false);
+                JP_UpdateItem.setVisible(true);
+                ShowUpdateDetails("03");
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(AdminMainMenu.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_Item3MouseClicked
+
+    private void Item4MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_Item4MouseClicked
+        try {
+            if (ItemName1.getText().equals("Empty Slot")) {
+                JOptionPane.showMessageDialog(null, "Empty Slot, Please try Something Else!", "Empty Slot", JOptionPane.WARNING_MESSAGE);
+            } else {
+                JP_MainMenu.setVisible(false);
+                JP_UpdateItem.setVisible(true);
+                ShowUpdateDetails("04");
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(AdminMainMenu.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_Item4MouseClicked
+
+    private void Item5MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_Item5MouseClicked
+        try {
+            if (ItemName1.getText().equals("Empty Slot")) {
+                JOptionPane.showMessageDialog(null, "Empty Slot, Please try Something Else!", "Empty Slot", JOptionPane.WARNING_MESSAGE);
+            } else {
+                JP_MainMenu.setVisible(false);
+                JP_UpdateItem.setVisible(true);
+                ShowUpdateDetails("05");
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(AdminMainMenu.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_Item5MouseClicked
+
+    private void Item6MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_Item6MouseClicked
+        try {            
+            if (ItemName1.getText().equals("Empty Slot")) {
+                JOptionPane.showMessageDialog(null, "Empty Slot, Please try Something Else!", "Empty Slot", JOptionPane.WARNING_MESSAGE);
+            } else {
+                JP_MainMenu.setVisible(false);
+                JP_UpdateItem.setVisible(true);
+                ShowUpdateDetails("06");
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(AdminMainMenu.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_Item6MouseClicked
 
     /**
      * @param args the command line arguments
@@ -3694,14 +3765,12 @@ public class AdminMainMenu extends javax.swing.JFrame {
     private javax.swing.JLabel lblTemp;
     private javax.swing.JLabel lblTransactionID;
     private javax.swing.JLabel lblUpItemID;
+    private javax.swing.JLabel lblUpItemName;
     private javax.swing.JLabel lblUpItemPic;
     private javax.swing.JLabel lblUpItemPicPrev;
     private javax.swing.JLabel lblUpItemPrice;
     private javax.swing.JLabel lblUpItemQuantity;
-    private javax.swing.JLabel lblUpNewItemName;
-    private javax.swing.JLabel lblUpOldItemName;
     private javax.swing.JLabel lblUpTemp;
-    private javax.swing.JLabel lblUpdateItem;
     private javax.swing.JLabel lblWelcome;
     private javax.swing.JPanel lineAddItem;
     private javax.swing.JPanel lineDeleteAccount;
@@ -3726,9 +3795,8 @@ public class AdminMainMenu extends javax.swing.JFrame {
     private javax.swing.JTextField tfEditUsername;
     private javax.swing.JTextField tfPastTranID;
     private javax.swing.JTextField tfUpItemID;
+    private javax.swing.JTextField tfUpItemName;
     private javax.swing.JTextField tfUpItemPrice;
     private javax.swing.JTextField tfUpItemQuantity;
-    private javax.swing.JTextField tfUpNewItemName;
-    private javax.swing.JTextField tfUpOldItemName;
     // End of variables declaration//GEN-END:variables
 }
